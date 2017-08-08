@@ -88,7 +88,10 @@ static char* getTorrentFilename(tr_session const* session, tr_info const* inf, e
 
 static bool path_component_is_suspicious(char const* component)
 {
-    return component == NULL || strpbrk(component, PATH_DELIMITER_CHARS) != NULL || strcmp(component, ".") == 0 ||
+    if (component != NULL && component[0] == '/') /* BUG: this is only valid for Unix systems */
+        return 1;
+    // return component == NULL || strpbrk(component, PATH_DELIMITER_CHARS) != NULL || strcmp(component, ".") == 0 || /* this modification is unsafe */
+    return component == NULL || strcmp(component, ".") == 0 ||
            strcmp(component, "..") == 0;
 }
 
