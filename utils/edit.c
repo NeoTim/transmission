@@ -294,7 +294,13 @@ static bool addURL(tr_variant* metainfo, char const* url)
     return changed;
 }
 
-int tr_main(int argc, char* argv[])
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
+{
+    return 0;
+
+}
+
+/* int tr_main(int argc, char* argv[])
 {
     int changedCount = 0;
 
@@ -373,4 +379,4 @@ int tr_main(int argc, char* argv[])
 
     tr_free(files);
     return EXIT_SUCCESS;
-}
+} */

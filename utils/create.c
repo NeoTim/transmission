@@ -126,7 +126,12 @@ static char* tr_getcwd(void)
     return result;
 }
 
-int tr_main(int argc, char* argv[])
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
+{
+    return 0;
+}
+
+/* int tr_main(int argc, char* argv[])
 {
     char* out2 = NULL;
     tr_metainfo_builder* b = NULL;
@@ -236,4 +241,4 @@ int tr_main(int argc, char* argv[])
     tr_metaInfoBuilderFree(b);
     tr_free(out2);
     return EXIT_SUCCESS;
-}
+} */

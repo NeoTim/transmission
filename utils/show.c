@@ -10,6 +10,7 @@
 #include <string.h> /* strcmp(), strchr(), memcmp() */
 #include <stdlib.h> /* qsort() */
 #include <time.h>
+#include <errno.h>
 
 #define CURL_DISABLE_TYPECHECK /* otherwise -Wunreachable-code goes insane */
 #include <curl/curl.h>
@@ -286,72 +287,67 @@ static void doScrape(tr_info const* inf)
     }
 }
 
-int tr_main(int argc, char* argv[])
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-    int err;
-    tr_info inf;
-    tr_ctor* ctor;
+	int fd;
+	char name[] = "/tmp/libFuzzer-XXXXXX";
 
-    tr_logSetLevel(TR_LOG_ERROR);
-    tr_formatter_mem_init(MEM_K, MEM_K_STR, MEM_M_STR, MEM_G_STR, MEM_T_STR);
-    tr_formatter_size_init(DISK_K, DISK_K_STR, DISK_M_STR, DISK_G_STR, DISK_T_STR);
-    tr_formatter_speed_init(SPEED_K, SPEED_K_STR, SPEED_M_STR, SPEED_G_STR, SPEED_T_STR);
+	fd = mkstemp(name);
+	if (fd < 0) {
+		fprintf(stderr, "Problem detected while creating the input file, %s, aborting!\n", strerror(errno));
+		exit(-1);
+	}
+	write(fd, data, size);
+	close(fd);
 
-    if (parseCommandLine(argc, (char const* const*)argv) != 0)
-    {
-        return EXIT_FAILURE;
-    }
+	/* application logic */
+	filename = name;
+	int err;
+	tr_info inf;
+	tr_ctor* ctor;
 
-    if (showVersion)
-    {
-        fprintf(stderr, MY_NAME " " LONG_VERSION_STRING "\n");
-        return EXIT_SUCCESS;
-    }
+	tr_logSetLevel(TR_LOG_ERROR);
+	tr_formatter_mem_init(MEM_K, MEM_K_STR, MEM_M_STR, MEM_G_STR, MEM_T_STR);
+	tr_formatter_size_init(DISK_K, DISK_K_STR, DISK_M_STR, DISK_G_STR, DISK_T_STR);
+	tr_formatter_speed_init(SPEED_K, SPEED_K_STR, SPEED_M_STR, SPEED_G_STR, SPEED_T_STR);
 
-    /* make sure the user specified a filename */
-    if (filename == NULL)
-    {
-        fprintf(stderr, "ERROR: No .torrent file specified.\n");
-        tr_getopt_usage(MY_NAME, getUsage(), options);
-        fprintf(stderr, "\n");
-        return EXIT_FAILURE;
-    }
+	/* try to parse the .torrent file */
+	ctor = tr_ctorNew(NULL);
+	tr_ctorSetMetainfoFromFile(ctor, filename);
+	err = tr_torrentParse(ctor, &inf);
+	tr_ctorFree(ctor);
 
-    /* try to parse the .torrent file */
-    ctor = tr_ctorNew(NULL);
-    tr_ctorSetMetainfoFromFile(ctor, filename);
-    err = tr_torrentParse(ctor, &inf);
-    tr_ctorFree(ctor);
+	if (err != TR_PARSE_OK)
+	{
+		fprintf(stderr, "Error parsing .torrent file \"%s\"\n", filename);
+		// return EXIT_FAILURE;
+		return 0;
+	}
 
-    if (err != TR_PARSE_OK)
-    {
-        fprintf(stderr, "Error parsing .torrent file \"%s\"\n", filename);
-        return EXIT_FAILURE;
-    }
+	if (magnetFlag)
+	{
+		doShowMagnet(&inf);
+	}
+	else
+	{
+		printf("Name: %s\n", inf.name);
+		printf("File: %s\n", filename);
+		printf("\n");
+		fflush(stdout);
 
-    if (magnetFlag)
-    {
-        doShowMagnet(&inf);
-    }
-    else
-    {
-        printf("Name: %s\n", inf.name);
-        printf("File: %s\n", filename);
-        printf("\n");
-        fflush(stdout);
+		if (scrapeFlag)
+		{
+			doScrape(&inf);
+		}
+		else
+		{
+			showInfo(&inf);
+		}
+	}
 
-        if (scrapeFlag)
-        {
-            doScrape(&inf);
-        }
-        else
-        {
-            showInfo(&inf);
-        }
-    }
+	tr_metainfoFree(&inf);
 
-    /* cleanup */
-    putc('\n', stdout);
-    tr_metainfoFree(&inf);
-    return EXIT_SUCCESS;
+	remove(name);
+
+	return 0;
 }

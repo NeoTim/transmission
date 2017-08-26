@@ -1,0 +1,11 @@
+./autogen.sh
+
+CC=clang CXX=clang++ CXXFLAGS="-fsanitize=address -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-gep,trace-div" CFLAGS="-fsanitize=address -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-gep,trace-div" ./configure
+
+make -j8
+
+cd utils
+
+Change -fsanitize=address to -fsanitize=address,fuzzer at two places.
+
+make clean; make V=1
